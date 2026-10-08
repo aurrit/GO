@@ -22,6 +22,10 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 
 // Новый обработчик для /ping
 func pingHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
     fmt.Fprintf(w, "pong")
 }
 
