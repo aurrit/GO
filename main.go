@@ -15,7 +15,7 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 Версия: 1.0.0
 Описание: Учебный HTTP-сервер на Go с базовой маршрутизацией.
 Технологии: Go, net/http
-Автор: Куюжуклу А.В
+Автор: Ваше имя
 `
     fmt.Fprintf(w, description)
 }
