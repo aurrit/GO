@@ -4,34 +4,31 @@ import (
     "database/sql"
     "fmt"
     "net/http"
-    "os"
 
     _ "modernc.org/sqlite"
 
     "go-simple-server/internal/handlers"
     "go-simple-server/internal/repository"
+    "go-simple-server/internal/database"
 )
 
 func main() {
-    db, err := sql.Open("sqlite", "expenses.db")
+    db, err := sql.Open("sqlite", "expenses.db?_pragma=foreign_keys(1)")
     if err != nil {
         fmt.Printf("Ошибка открытия базы данных: %v\n", err)
         return
     }
     defer db.Close()
 
-    migration, err := os.ReadFile("migrations/001_create_expenses.sql")
-    if err != nil {
-        fmt.Printf("Ошибка чтения миграции: %v\n", err)
-        return
-    }
-    if _, err := db.Exec(string(migration)); err != nil {
-        fmt.Printf("Ошибка применения миграции: %v\n", err)
+       if err := database.Migrate(db, "migrations"); err != nil {
+        fmt.Printf("Ошибка миграций: %v\n", err)
         return
     }
 
-    repo := repository.NewExpenseRepository(db)
-    handlers.SetRepository(repo)
+    handlers.SetRepositories(
+        repository.NewExpenseRepository(db),
+        repository.NewCategoryRepository(db),
+    )
 
     http.HandleFunc("/", handlers.IndexHandler)
     http.HandleFunc("/add", handlers.AddExpenseHandler)

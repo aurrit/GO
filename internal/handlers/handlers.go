@@ -10,26 +10,41 @@ import (
 )
 
 var (
-    repo      *repository.ExpenseRepository
-    templates = template.Must(template.ParseGlob("web/templates/*.html"))
+    repo         *repository.ExpenseRepository
+    categoryRepo *repository.CategoryRepository
+    templates    = template.Must(template.ParseGlob("web/templates/*.html"))
 )
 
-func SetRepository(r *repository.ExpenseRepository) {
-    repo = r
+func SetRepositories(e *repository.ExpenseRepository, c *repository.CategoryRepository) {
+    repo = e
+    categoryRepo = c
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-    expenses, err := repo.GetAll()
+    q := r.URL.Query()
+    categoryID, _ := strconv.Atoi(q.Get("category"))
+    filter := models.ExpenseFilter{
+        CategoryID: categoryID,
+        DateFrom:   q.Get("from"),
+        DateTo:     q.Get("to"),
+    }
+
+    expenses, err := repo.GetAll(filter)
+    if err != nil {
+        http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+        return
+    }
+    categories, err := categoryRepo.GetAll()
     if err != nil {
         http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
         return
     }
 
     data := struct {
-        Expenses []models.Expense
-    }{
-        Expenses: expenses,
-    }
+        Expenses   []models.Expense
+        Categories []models.Category
+        Filter     models.ExpenseFilter
+    }{expenses, categories, filter}
     templates.ExecuteTemplate(w, "layout", data)
 }
 
@@ -41,13 +56,13 @@ func AddExpenseHandler(w http.ResponseWriter, r *http.Request) {
 
     r.ParseForm()
     amount, _ := strconv.ParseFloat(r.FormValue("amount"), 64)
-    description := r.FormValue("description")
-    date := r.FormValue("date")
+    categoryID, _ := strconv.Atoi(r.FormValue("category_id"))
 
     err := repo.Create(models.Expense{
         Amount:      amount,
-        Description: description,
-        Date:        date,
+        Description: r.FormValue("description"),
+        Date:        r.FormValue("date"),
+        CategoryID:  categoryID,
     })
     if err != nil {
         http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
@@ -79,8 +94,17 @@ func EditExpenseFormHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Трата не найдена", http.StatusNotFound)
         return
     }
+    categories, err := categoryRepo.GetAll()
+    if err != nil {
+        http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+        return
+    }
 
-    templates.ExecuteTemplate(w, "edit", expense)
+    data := struct {
+        Expense    models.Expense
+        Categories []models.Category
+    }{expense, categories}
+    templates.ExecuteTemplate(w, "edit", data)
 }
 
 func UpdateExpenseHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,14 +116,14 @@ func UpdateExpenseHandler(w http.ResponseWriter, r *http.Request) {
     r.ParseForm()
     id, _ := strconv.Atoi(r.FormValue("id"))
     amount, _ := strconv.ParseFloat(r.FormValue("amount"), 64)
-    description := r.FormValue("description")
-    date := r.FormValue("date")
+    categoryID, _ := strconv.Atoi(r.FormValue("category_id"))
 
     err := repo.Update(models.Expense{
         ID:          id,
         Amount:      amount,
-        Description: description,
-        Date:        date,
+        Description: r.FormValue("description"),
+        Date:        r.FormValue("date"),
+        CategoryID:  categoryID,
     })
     if err != nil {
         http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
