@@ -22,21 +22,21 @@ func nullableCategory(id int) any {
     return id
 }
 
-func (r *ExpenseRepository) Create(e models.Expense) error {
+func (r *ExpenseRepository) Create(userID int, e models.Expense) error {
     _, err := r.db.Exec(
-        "INSERT INTO expenses (amount, description, date, category_id) VALUES (?, ?, ?, ?)",
-        e.Amount, e.Description, e.Date, nullableCategory(e.CategoryID),
+        "INSERT INTO expenses (amount, description, date, category_id, user_id) VALUES (?, ?, ?, ?, ?)",
+        e.Amount, e.Description, e.Date, nullableCategory(e.CategoryID), userID,
     )
     return err
 }
 
-func (r *ExpenseRepository) GetAll(f models.ExpenseFilter) ([]models.Expense, error) {
+func (r *ExpenseRepository) GetAll(userID int, f models.ExpenseFilter) ([]models.Expense, error) {
     query := `SELECT e.id, e.amount, e.description, e.date,
                      COALESCE(e.category_id, 0), COALESCE(c.name, 'Без категории')
               FROM expenses e
               LEFT JOIN categories c ON c.id = e.category_id
-              WHERE 1=1`
-    var args []any
+              WHERE e.user_id = ?`
+    args := []any{userID}
 
     if f.CategoryID > 0 {
         query += " AND e.category_id = ?"
@@ -69,27 +69,27 @@ func (r *ExpenseRepository) GetAll(f models.ExpenseFilter) ([]models.Expense, er
     return expenses, nil
 }
 
-func (r *ExpenseRepository) GetByID(id int) (models.Expense, error) {
+func (r *ExpenseRepository) GetByID(userID, id int) (models.Expense, error) {
     var e models.Expense
     err := r.db.QueryRow(
         `SELECT e.id, e.amount, e.description, e.date,
                 COALESCE(e.category_id, 0), COALESCE(c.name, 'Без категории')
          FROM expenses e
          LEFT JOIN categories c ON c.id = e.category_id
-         WHERE e.id = ?`, id,
+         WHERE e.id = ? AND e.user_id = ?`, id, userID,
     ).Scan(&e.ID, &e.Amount, &e.Description, &e.Date, &e.CategoryID, &e.CategoryName)
     return e, err
 }
 
-func (r *ExpenseRepository) Update(e models.Expense) error {
+func (r *ExpenseRepository) Update(userID int, e models.Expense) error {
     _, err := r.db.Exec(
-        "UPDATE expenses SET amount = ?, description = ?, date = ?, category_id = ? WHERE id = ?",
-        e.Amount, e.Description, e.Date, nullableCategory(e.CategoryID), e.ID,
+        "UPDATE expenses SET amount = ?, description = ?, date = ?, category_id = ? WHERE id = ? AND user_id = ?",
+        e.Amount, e.Description, e.Date, nullableCategory(e.CategoryID), e.ID, userID,
     )
     return err
 }
 
-func (r *ExpenseRepository) Delete(id int) error {
-    _, err := r.db.Exec("DELETE FROM expenses WHERE id = ?", id)
+func (r *ExpenseRepository) Delete(userID, id int) error {
+    _, err := r.db.Exec("DELETE FROM expenses WHERE id = ? AND user_id = ?", id, userID)
     return err
 }

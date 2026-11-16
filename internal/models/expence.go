@@ -19,3 +19,8 @@ type ExpenseFilter struct {
     DateFrom   string
     DateTo     string
 }
+type User struct {
+    ID           int
+    Email        string
+    PasswordHash string
+}

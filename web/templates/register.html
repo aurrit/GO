@@ -1,0 +1,19 @@
+{{define "register"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+</head>
+<body>
+    <h2>Регистрация</h2>
+    {{if .Error}}<p style="color:red">{{.Error}}</p>{{end}}
+    <form method="POST" action="/register">
+        <label>Email: <input type="email" name="email" required></label><br>
+        <label>Пароль: <input type="password" name="password" minlength="6" required></label><br>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+    <a href="/login">Уже есть аккаунт? Войти</a>
+</body>
+</html>
+{{end}}
